@@ -389,3 +389,8 @@ button:focus-visible {
     min-height: 200px;
   }
 }
+.transform-component-module_content__FBWxo{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
