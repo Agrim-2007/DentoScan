@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import './ImageWithBoundingBoxes.css';
 
 const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
   const containerRef = useRef(null);
