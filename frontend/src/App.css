@@ -358,7 +358,12 @@ button:focus-visible {
   align-items: center;
   object-fit: contain
 }
-
+.main-heading{
+  text-align: center;
+}
+.outside-container{
+  overflow: hidden;
+}
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
