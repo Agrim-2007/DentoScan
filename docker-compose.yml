@@ -9,6 +9,12 @@ services:
       - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - dentoscan-network
 
@@ -24,9 +30,15 @@ services:
     environment:
       - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - dentoscan-network
 
 networks:
   dentoscan-network:
-    driver: bridge 
+    driver: bridge
