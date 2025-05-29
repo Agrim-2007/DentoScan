@@ -109,11 +109,13 @@ button:focus-visible {
 }
 
 .image-panel {
-  flex: 0.4;
+  flex: 0.5;
+  overflow: auto;
 }
 
 .report-panel {
-  flex: 0.6;
+  flex: 0.5;
+  overflow: auto;
 }
 
 .title {
@@ -170,6 +172,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
+
 }
 
 .image-container img {
@@ -349,6 +352,12 @@ button:focus-visible {
   background-color: #d8c8ff;
   box-shadow: 0 2px 4px rgba(147, 112, 219, 0.2);
 }
+.transform-component-module_content__FBWxo{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  object-fit: contain
+}
 
 @media (max-width: 768px) {
   .app-container {
@@ -388,9 +397,4 @@ button:focus-visible {
   .image-preview {
     min-height: 200px;
   }
-}
-.transform-component-module_content__FBWxo{
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
