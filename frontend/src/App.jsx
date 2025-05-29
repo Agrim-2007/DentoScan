@@ -415,9 +415,34 @@ function App() {
                 ) : result.error ? (
                   <Alert severity="error">{result.error}</Alert>
                 ) : (
-                  <Typography variant="body1" className="report-text">
-                    {result.report}
-                  </Typography>
+                  <>
+                    <Typography variant="body1" className="report-text" style={{ whiteSpace: 'pre-wrap' }}>
+                      {result.report}
+                    </Typography>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const element = document.createElement("a");
+                        const file = new Blob([result.report], { type: "text/plain" });
+                        element.href = URL.createObjectURL(file);
+                        element.download = `${result.fileName || 'diagnostic_report'}.txt`;
+                        document.body.appendChild(element);
+                        element.click();
+                        document.body.removeChild(element);
+                      }}
+                      style={{
+                        marginTop: '10px',
+                        padding: '6px 12px',
+                        backgroundColor: '#6200ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Download Report
+                    </button>
+                  </>
                 )}
               </Paper>
             ))
