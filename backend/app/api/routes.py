@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from typing import List, Dict, Any
@@ -22,10 +23,10 @@ async def health_check():
 
 @router.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    allowed_extensions = ["dcm", "rvg", "png", "jpg", "jpeg"]
+    allowed_extensions = ["dcm", "rvg"]
     file_extension = file.filename.split(".")[-1].lower()
     if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .dcm, .rvg, .png, .jpg, or .jpeg files are allowed.")
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .dcm, .rvg files are allowed.")
 
     temp_filename = f"temp/{uuid.uuid4()}_{file.filename}"
 
@@ -37,6 +38,7 @@ async def predict(file: UploadFile = File(...)):
 
     image_to_predict = temp_filename
     png_url = None
+    image_dimensions = None
     if file_extension in ["dcm", "rvg"]:
         try:
             png_path = convert_dicom_to_png(temp_filename)
@@ -55,17 +57,17 @@ async def predict(file: UploadFile = File(...)):
             raise HTTPException(status_code=500, detail=f"Could not convert DICOM to PNG: {e}")
 
     elif file_extension in ["png", "jpg", "jpeg"]:
-         static_filename = f"static/{uuid.uuid4()}.{file_extension}"
-         shutil.copy(temp_filename, static_filename)
-         png_url = f"/static/{os.path.basename(static_filename)}"
-         image_to_predict = static_filename
-         # Get image dimensions for direct image upload
-         try:
-             with Image.open(image_to_predict) as img:
-                 image_dimensions = {"width": img.width, "height": img.height}
-         except Exception as img_e:
-             logger.error(f"Error getting image dimensions: {img_e}")
-             image_dimensions = None # Or handle as appropriate
+        converted_filename = f"static/{uuid.uuid4()}.{file_extension}"
+        shutil.copy(temp_filename, converted_filename)
+        png_url = f"/static/{os.path.basename(converted_filename)}"
+        image_to_predict = converted_filename
+        # Get image dimensions for direct image upload
+        try:
+            with Image.open(image_to_predict) as img:
+                image_dimensions = {"width": img.width, "height": img.height}
+        except Exception as img_e:
+            logger.error(f"Error getting image dimensions: {img_e}")
+            image_dimensions = None # Or handle as appropriate
 
     predictions = []
     try:
@@ -78,20 +80,21 @@ async def predict(file: UploadFile = File(...)):
     try:
         diagnostic_report = await generate_report(predictions)
     except Exception as e:
-         logger.error(f"Error generating report with LLM: {e}")
-         raise HTTPException(status_code=500, detail=f"Error generating diagnostic report: {e}")
+        logger.error(f"Error generating report with LLM: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating diagnostic report: {e}")
 
     finally:
 
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
 
-        if image_to_predict and os.path.exists(image_to_predict) and image_to_predict != temp_filename:
-             os.remove(image_to_predict)
+        # Commenting out deletion of image_to_predict so frontend can access the image
+        # if image_to_predict and os.path.exists(image_to_predict) and image_to_predict != temp_filename:
+        #      os.remove(image_to_predict)
 
     return JSONResponse(content={
         "predictions": predictions,
         "png_url": png_url,
         "report": diagnostic_report,
         "image_dimensions": image_dimensions
-    }) 
+    })

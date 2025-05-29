@@ -52,6 +52,10 @@ if not os.path.exists("static"):
     os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+if not os.path.exists("converted"):
+    os.makedirs("converted")
+app.mount("/converted", StaticFiles(directory="converted"), name="converted")
+
 if not os.path.exists("temp"):
     os.makedirs("temp")
 

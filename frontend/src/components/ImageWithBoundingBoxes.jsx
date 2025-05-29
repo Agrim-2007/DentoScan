@@ -1,0 +1,88 @@
+import React, { useRef, useEffect, useState } from 'react';
+import './ImageWithBoundingBoxes.css';
+
+const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
+  const containerRef = useRef(null);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+
+  const handleImageLoad = (event) => {
+    const { naturalWidth, naturalHeight, width, height } = event.target;
+    setImageSize({ width, height, naturalWidth, naturalHeight });
+  };
+
+  if (!imageUrl) return null;
+
+  const scaleX = imageSize.width && imageDimensions?.width ? imageSize.width / imageDimensions.width : 1;
+  const scaleY = imageSize.height && imageDimensions?.height ? imageSize.height / imageDimensions.height : 1;
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: imageSize.width || 'auto',
+        height: imageSize.height || 'auto',
+        minWidth: '300px',
+        minHeight: '300px',
+        border: '1px solid #ccc',
+        boxSizing: 'border-box',
+      }}
+    >
+      <img
+        src={imageUrl}
+        alt="Processed X-ray"
+        style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+        onLoad={handleImageLoad}
+      />
+      {predictions &&
+        predictions.map((prediction, index) => {
+          const { x, y, width, height, class: className, confidence } = prediction;
+          const boxLeft = (x - width / 2) * scaleX;
+          const boxTop = (y - height / 2) * scaleY;
+          const boxWidth = width * scaleX;
+          const boxHeight = height * scaleY;
+
+          let color = 'lime';
+          if (className.toLowerCase() === 'cavity') color = 'red';
+          else if (className.toLowerCase() === 'periapical lesion') color = 'blue';
+
+          return (
+            <div
+              key={index}
+              className="bounding-box"
+              style={{
+                position: 'absolute',
+                left: boxLeft,
+                top: boxTop,
+                width: boxWidth,
+                height: boxHeight,
+                border: `2px solid ${color}`,
+                boxSizing: 'border-box',
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                className="bounding-box-label"
+                style={{
+                  backgroundColor: color,
+                  color: 'white',
+                  fontSize: '12px',
+                  padding: '2px 4px',
+                  position: 'absolute',
+                  top: '-20px',
+                  left: 0,
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'auto',
+                }}
+              >
+                {className} - {Math.round(confidence * 100)}%
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  );
+};
+
+export default ImageWithBoundingBoxes;

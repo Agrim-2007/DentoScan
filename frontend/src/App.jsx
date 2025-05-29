@@ -6,6 +6,9 @@ import Button from '@mui/material/Button'
 import CloseIcon from '@mui/icons-material/Close'
 import { v4 as uuidv4 } from 'uuid'
 
+import DicomViewer from './components/DicomViewer'
+import ImageWithBoundingBoxes from './components/ImageWithBoundingBoxes'
+
 import './App.css'
 
 const VisuallyHiddenInput = styled('input')({
@@ -162,7 +165,12 @@ function App() {
     })
 
     // Wait for all promises to settle
-    await Promise.all(processingPromises)
+    const results = await Promise.all(processingPromises)
+
+    // Set the first result as selectedResult to display image and bounding boxes
+    if (results.length > 0) {
+      setSelectedResult(results[0])
+    }
 
     setIsLoading(false);
   }
@@ -300,29 +308,40 @@ function App() {
           {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Analyze X-ray'}
         </button>
 
-        {selectedResult && selectedResult.imageUrl && !selectedResult.error &&
-          <div className="image-preview">
-            <div className="image-container" style={{ width: '800px', height: '600px' }}>
-              <img
-                src={selectedResult.imageUrl}
-                alt={selectedResult.fileName}
-                onLoad={(e) => {
-                  // Trigger re-render to calculate bounding box positions correctly
-                  const updateResults = (currentResults) => {
-                    return currentResults.map(item => {
-                      if (item.id === selectedResult.id) {
-                        return { ...item, _updateTrigger: Date.now() }
-                      }
-                      return item
-                    })
-                  }
-                  setProcessingResults(updateResults)
-                }}
-              />
-              {selectedResult.predictions && selectedResult.imageDimensions && renderBoundingBoxes(selectedResult.predictions, document.querySelector('.image-container img'), selectedResult.imageDimensions)}
-            </div>
+        {/* Display all Roboflow processed images with bounding boxes below the analyze button */}
+        {processingResults.length > 0 && (
+          <div className="all-images-container" style={{ 
+            marginTop: '20px', 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '20px', 
+            overflowY: 'auto', 
+            maxHeight: '600px', 
+            paddingRight: '10px',
+            border: '1px solid #ddd',
+            borderRadius: '8px'
+          }}>
+            {processingResults.map((result) => (
+              result.imageUrl && !result.error && (
+                <div key={result.id} className="image-preview" style={{ 
+                  position: 'relative', 
+                  minWidth: '400px', 
+                  height: '600px', 
+                  border: '1px solid #ccc', 
+                  borderRadius: '8px', 
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}>
+                  <ImageWithBoundingBoxes
+                    imageUrl={result.imageUrl}
+                    predictions={result.predictions}
+                    imageDimensions={result.imageDimensions}
+                  />
+                </div>
+              )
+            ))}
           </div>
-        }
+        )}
 
         {selectedResult && selectedResult.error && ( !selectedResult.isLoading &&
           <Alert severity="error" sx={{ marginTop: '20px' }}>{selectedResult.error}</Alert>

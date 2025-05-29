@@ -34,4 +34,4 @@ def convert_dicom_to_png(dicom_path: str) -> str:
         return str(output_path)
         
     except Exception as e:
-        raise Exception(f"Error converting DICOM to PNG: {str(e)}") 
+        raise Exception(f"Error converting DICOM to PNG: {str(e)}")
