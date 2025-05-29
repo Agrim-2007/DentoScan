@@ -105,7 +105,7 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
                       padding: '2px 4px',
                       position: 'absolute',
                       top: '110%',
-                      left: 0,
+                      left: -10,
                       whiteSpace: 'nowrap',
                       pointerEvents: 'auto',
                     }}
