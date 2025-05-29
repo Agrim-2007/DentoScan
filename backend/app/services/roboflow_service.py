@@ -95,6 +95,7 @@ def apply_nms(predictions: List[Dict[str, Any]], iou_threshold: float) -> List[D
 async def get_predictions(image_path: str):
     """
     Sends image file to Roboflow as multipart upload for inference.
+    Applies Non-Maximum Suppression (NMS) to filter overlapping boxes.
     """
     try:
         with open(image_path, "rb") as image_file:
@@ -102,15 +103,18 @@ async def get_predictions(image_path: str):
                 url=f"https://detect.roboflow.com/{ROBOFLOW_MODEL_ID}",
                 params={
                     "api_key": ROBOFLOW_API_KEY,
-                    "confidence": 30,
-                    "overlap": 50
+                    "confidence": int(ROBOFLOW_CONFIDENCE_THRESHOLD * 100),
+                    "overlap": int(ROBOFLOW_OVERLAP_THRESHOLD * 100)
                 },
                 files={"file": ("image.png", image_file, "image/png")}
             )
             response.raise_for_status()
             result = response.json()
 
-        return result.get("predictions", [])
+        raw_predictions = result.get("predictions", [])
+        # Apply NMS with configured overlap threshold
+        filtered_predictions = apply_nms(raw_predictions, ROBOFLOW_OVERLAP_THRESHOLD)
+        return filtered_predictions
 
     except Exception as e:
         raise Exception(f"Error sending image to Roboflow: {str(e)}")
