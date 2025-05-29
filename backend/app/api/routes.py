@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from typing import List, Dict, Any
@@ -23,10 +22,10 @@ async def health_check():
 
 @router.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    allowed_extensions = ["dcm", "rvg"]
+    allowed_extensions = ["dcm", "rvg", "png", "jpg", "jpeg"]
     file_extension = file.filename.split(".")[-1].lower()
     if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .dcm, .rvg files are allowed.")
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .dcm, .rvg, .png, .jpg, or .jpeg files are allowed.")
 
     temp_filename = f"temp/{uuid.uuid4()}_{file.filename}"
 
