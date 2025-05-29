@@ -23,6 +23,9 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 })
 
+const API_BASE_URL = 'https://dentoscan.onrender.com'; 
+
+
 function App() {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [processingResults, setProcessingResults] = useState([])
@@ -130,7 +133,8 @@ function App() {
       let result = initialResults.find(r => r.id === fileItem.id) || { id: fileItem.id, fileName: fileItem.file.name, isLoading: true }; 
 
       try {
-        const response = await fetch(`http://localhost:8000/api/predict`, {
+
+        const response = await fetch(`${API_BASE_URL}/api/predict`, {
           method: 'POST',
           body: formData
         })
@@ -143,7 +147,7 @@ function App() {
         const data = await response.json()
         result = { 
           ...result, 
-          imageUrl: `http://localhost:8000${data.png_url}`, 
+          imageUrl: `${API_BASE_URL}${data.png_url}`, 
           predictions: data.predictions, 
           imageDimensions: data.image_dimensions, 
           report: data.report, 
@@ -153,12 +157,12 @@ function App() {
         console.error(`Error processing ${fileItem.file.name}:`, error)
         result = { ...result, error: error.message || 'Error processing file.', isLoading: false }
       } finally {
-        // Update the specific file's result in the state
+
         setProcessingResults(currentResults =>
           currentResults.map(item => (item.id === fileItem.id ? result : item))
         )
       }
-      return result; // Return the final result for this file
+      return result; 
     })
 
 
