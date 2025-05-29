@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import './ImageWithBoundingBoxes.css';
 
 const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
@@ -6,9 +6,18 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
   const handleImageLoad = (event) => {
-    const { naturalWidth, naturalHeight, width, height } = event.target;
-    setImageSize({ width, height, naturalWidth, naturalHeight });
+    const { naturalWidth, naturalHeight } = event.target;
+    const containerWidth = containerRef.current ? containerRef.current.clientWidth : naturalWidth;
+    const scaleFactor = containerWidth / naturalWidth;
+    const scaledHeight = naturalHeight * scaleFactor;
+    setImageSize({ width: containerWidth, height: scaledHeight, naturalWidth, naturalHeight });
   };
+
+  useEffect(() => {
+    console.log('Image Size:', imageSize);
+    console.log('Image Dimensions from backend:', imageDimensions);
+    console.log('Predictions:', predictions);
+  }, [imageSize, imageDimensions, predictions]);
 
   if (!imageUrl) return null;
 
@@ -21,10 +30,9 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
       style={{
         position: 'relative',
         display: 'inline-block',
-        width: imageSize.width || 'auto',
+        width: '100%',
+        maxWidth: '600px',
         height: imageSize.height || 'auto',
-        minWidth: '300px',
-        minHeight: '300px',
         border: '1px solid #ccc',
         boxSizing: 'border-box',
       }}
@@ -32,7 +40,7 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
       <img
         src={imageUrl}
         alt="Processed X-ray"
-        style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+        style={{ display: 'block', width: '100%', height: 'auto' }}
         onLoad={handleImageLoad}
       />
       {predictions &&

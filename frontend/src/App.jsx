@@ -233,12 +233,12 @@ function App() {
         </Alert>
       </Snackbar>
 
-      <div className="image-panel panel">
-        <Typography variant="h5" className="title">
+      <div className="image-panel panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Typography variant="h5" className="title" style={{ flexShrink: 1 }}>
           Dental X-ray Viewer
         </Typography>
         
-        <div className="upload-area" onClick={() => document.getElementById('fileInput')?.click()}>
+        <div className="upload-area" onClick={() => document.getElementById('fileInput')?.click()} style={{ flexShrink: 1 }}>
           <input
             id="fileInput"
             type="file"
@@ -257,7 +257,7 @@ function App() {
         </div>
 
         {filePreviews.length > 0 && (
-          <aside className="selected-files-previews">
+          <aside className="selected-files-previews" style={{ flexShrink: 1 }}>
             <Typography variant="h6">Selected Files:</Typography>
             <div className="previews-container">
               {filePreviews.map((preview) => (
@@ -304,6 +304,7 @@ function App() {
           className="predict-button"
           onClick={handlePredict}
           disabled={selectedFiles.length === 0 || isLoading}
+          style={{ flexShrink: 1 }}
         >
           {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Analyze X-ray'}
         </button>
@@ -319,14 +320,15 @@ function App() {
             maxHeight: '600px', 
             paddingRight: '10px',
             border: '1px solid #ddd',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            flex: '0 0 50%'
           }}>
             {processingResults.map((result) => (
               result.imageUrl && !result.error && (
                 <div key={result.id} className="image-preview" style={{ 
                   position: 'relative', 
                   minWidth: '400px', 
-                  height: '600px', 
+                  height: '100%', 
                   border: '1px solid #ccc', 
                   borderRadius: '8px', 
                   overflow: 'hidden',
@@ -340,6 +342,32 @@ function App() {
                 </div>
               )
             ))}
+          </div>
+        )}
+        {(processingResults.length > 0 || selectedFiles.length > 0) && (
+          <div style={{ paddingTop: '20px', textAlign: 'center' }}>
+            <button
+              onClick={() => {
+                setSelectedFiles([]);
+                setFilePreviews([]);
+                setProcessingResults([]);
+                setSelectedResult(null);
+                window.location.reload();
+              }}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#6200ea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                width: '100%',
+                maxWidth: '300px',
+              }}
+            >
+              Reanalyze
+            </button>
           </div>
         )}
 
