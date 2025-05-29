@@ -3,3 +3,7 @@ libxrender1
 libfontconfig1
 libsm6
 libxext6
+libqtgui4
+libqt4-test
+libhdf5-dev
+libatlas-base-dev
