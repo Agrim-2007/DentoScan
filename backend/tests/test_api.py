@@ -57,3 +57,4 @@ def test_predict_endpoint_dicom_conversion_error(mock_convert_dicom_to_png):
 
     assert response.status_code == 500
     assert response.json() == {"detail": "DICOM conversion failed"}
+    
