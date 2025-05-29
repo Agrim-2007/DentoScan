@@ -19,6 +19,7 @@
     "cornerstone-wado-image-loader": "^4.13.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-zoom-pan-pinch": "^3.7.0",
     "styled-components": "^6.1.18",
     "uuid": "^11.1.0"
   },
