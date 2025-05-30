@@ -3,6 +3,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
   const containerRef = useRef(null);
+  const imageRef = useRef(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [zoomEnabled, setZoomEnabled] = useState(false);
 
@@ -20,10 +21,10 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
     console.log('Predictions:', predictions);
   }, [imageSize, imageDimensions, predictions]);
 
-  if (!imageUrl) return null;
+  if (!imageUrl || !imageDimensions?.width || !imageDimensions?.height) return null;
 
-  const scaleX = imageSize.width && imageDimensions?.width ? imageSize.width / imageDimensions.width : 1;
-  const scaleY = imageSize.height && imageDimensions?.height ? imageSize.height / imageDimensions.height : 1;
+  const scaleX = imageSize.width / imageDimensions.width;
+  const scaleY = imageSize.height / imageDimensions.height;
 
   const toggleZoom = () => {
     setZoomEnabled(!zoomEnabled);
@@ -38,9 +39,8 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
-        maxWidth: '600px',
-        maxHeight: '600px',
-        height: '600px',
+        maxWidth: '400px', // Smaller max width for the image
+        height: 'auto',
         border: '1px solid #ccc',
         boxSizing: 'border-box',
         overflowY: 'auto',
@@ -60,19 +60,20 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
         panningActivationKey=" "
       >
         <TransformComponent>
-          <img
-            src={imageUrl}
-            alt="Processed X-ray"
-            style={{ display: 'block', width: '90%', height: 'auto' }}
-            onLoad={handleImageLoad}
-          />
-          {predictions &&
-            predictions.map((prediction, index) => {
+          <div style={{ position: 'relative', width: '100%' }}>
+            <img
+              ref={imageRef}
+              src={imageUrl}
+              alt="Processed X-ray"
+              style={{ display: 'block', width: '100%', height: 'auto' }}
+              onLoad={handleImageLoad}
+            />
+            {predictions?.map((prediction, index) => {
               const { x, y, width, height, class: className, confidence } = prediction;
               const boxLeft = (x - width / 2) * scaleX;
               const boxTop = (y - height / 2) * scaleY;
-              const boxWidth = (width * scaleX) * 0.9;
-              const boxHeight = (height * scaleY) * 0.9;
+              const boxWidth = width * scaleX;
+              const boxHeight = height * scaleY;
 
               let color = 'lime';
               if (className.toLowerCase() === 'cavity') color = 'red';
@@ -84,11 +85,11 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
                   className="bounding-box"
                   style={{
                     position: 'absolute',
-                    left: boxLeft,
-                    top: boxTop,
-                    width: boxWidth,
-                    height: boxHeight,
-                    border: className.toLowerCase() === 'cavity' ? '2px solid rgba(255, 0, 0, 0.8)' : `2px solid ${color}`,
+                    left: `${boxLeft}px`,
+                    top: `${boxTop}px`,
+                    width: `${boxWidth}px`,
+                    height: `${boxHeight}px`,
+                    border: `2px solid ${color}`,
                     boxSizing: 'border-box',
                     pointerEvents: 'none',
                     backgroundColor: 'transparent',
@@ -97,8 +98,8 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
                   <div
                     className="bounding-box-label"
                     style={{
-                      backgroundColor: 'transparent',
-                      color: 'black',
+                      backgroundColor: 'transparent', // unchanged
+                      color: 'black', // unchanged
                       fontWeight: 'normal',
                       fontSize: '12px',
                       padding: '2px 4px',
@@ -114,6 +115,7 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
                 </div>
               );
             })}
+          </div>
         </TransformComponent>
       </TransformWrapper>
     </div>
