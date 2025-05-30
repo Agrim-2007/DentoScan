@@ -101,11 +101,9 @@ Build a full-stack web application that allows users to upload a Dental X-ray DI
 - Ensure you have a valid Roboflow API key configured in the backend environment  
 - Pinch zoom toggles on image click for better user experience  
 
-## Contribution
-- Fork the repo and submit pull requests for improvements or bug fixes  
-
-## License
-- Specify license information here if applicable
+We welcome contributions to make DentoScan even better!
+- Fork the repo and submit pull requests for improvements, bug fixes, or new features.
+- Please ensure your code follows existing style guidelines.  
 
 ## Links
 - [Deployment URL](https://dento-scan.netlify.app/) 
