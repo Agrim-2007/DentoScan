@@ -106,3 +106,10 @@ Build a full-stack web application that allows users to upload a Dental X-ray DI
 
 ## License
 - Specify license information here if applicable
+
+## Links
+- [Deployment URL](https://dento-scan.netlify.app/) 
+- deployed using Netlify 
+
+- [Backend Deployment](https://dentoscan.onrender.com)
+- deployed using Render
