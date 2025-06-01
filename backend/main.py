@@ -41,7 +41,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://dento-scan.vercel.app","https://dento-scan.vercel.app/","https://dento-scan.netlify.app","https://dento-scan.netlify.app/","http://localhost:5173", "http://localhost:5174"],
+    allow_origins=["https://dento-scan-l8rpwb37m-agrim-2007s-projects.vercel.app","https://dento-scan-l8rpwb37m-agrim-2007s-projects.vercel.app/","https://dento-scan.vercel.app","https://dento-scan.vercel.app/","https://dento-scan.netlify.app","https://dento-scan.netlify.app/","http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
