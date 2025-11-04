@@ -81,7 +81,7 @@ Build a full-stack web application that allows users to upload a Dental X-ray DI
   - Response: JSON with image URL, predictions, image dimensions, and diagnostic report  
 
 ## Usage
-- Upload one or more DICOM images using the file upload area  
+- [Image1](https://drive.google.com/file/d/1x7PV8UmOe6YfVH2yjqPLR1ZZfndCIH3d/view) [Image2](https://drive.google.com/file/d/1P_lYOhMdQgOxZXs78rLTEZhs__Pf79Cm/view) donwload link for demo (safe to download) and upload the images(s)
 - Click "Analyze X-ray" to process images  
 - View original and annotated images with bounding boxes in the left panel  
 - Click on an image to toggle pinch zoom for detailed inspection  
