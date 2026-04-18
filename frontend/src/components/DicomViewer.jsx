@@ -4,7 +4,6 @@ import cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
 
 cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 
-// Configure the web worker for WADO image loader
 cornerstoneWADOImageLoader.webWorkerManager.initialize({
   maxWebWorkers: navigator.hardwareConcurrency || 1,
   startWebWorkersOnDemand: true,

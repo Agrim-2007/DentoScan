@@ -66,7 +66,7 @@ Build a full-stack web application that allows users to upload a Dental X-ray DI
    ```  
 
 ### Frontend
-1. Navigate to the `frontend` directory  
+1. Navigate to the `frontend` directory.  
 2. Install dependencies:  
    ```bash
    npm install
