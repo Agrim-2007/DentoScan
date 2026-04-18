@@ -1,120 +1,130 @@
-import os
-import requests
-from typing import List, Dict, Any
-from dotenv import load_dotenv
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import httpx
 import numpy as np
 
-from PIL import Image
-import io
-from inference_sdk import InferenceHTTPClient
+from ..core.config import Settings
+from ..core.exceptions import ExternalServiceError, ServiceConfigurationError
 
-# Load environment variables
-load_dotenv()
 
-# Get configuration from environment variables
-ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY")
-ROBOFLOW_MODEL_ID = os.getenv("ROBOFLOW_MODEL_ID", "adr/6")
-ROBOFLOW_CONFIDENCE_THRESHOLD = float(os.getenv("ROBOFLOW_CONFIDENCE_THRESHOLD", "0.3"))
-ROBOFLOW_OVERLAP_THRESHOLD = float(os.getenv("ROBOFLOW_OVERLAP_THRESHOLD", "0.5"))
+def compute_iou(box1: np.ndarray, box2: np.ndarray) -> float:
+    x1_intersection = max(box1[0], box2[0])
+    y1_intersection = max(box1[1], box2[1])
+    x2_intersection = min(box1[2], box2[2])
+    y2_intersection = min(box1[3], box2[3])
 
-if not ROBOFLOW_API_KEY:
-    raise ValueError("ROBOFLOW_API_KEY environment variable is not set")
+    intersection_width = max(0.0, x2_intersection - x1_intersection)
+    intersection_height = max(0.0, y2_intersection - y1_intersection)
+    intersection_area = intersection_width * intersection_height
 
-CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key=ROBOFLOW_API_KEY
-)
+    area_box1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
+    area_box2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+    union_area = area_box1 + area_box2 - intersection_area
 
-def compute_iou(box1, box2):
-    """Computes the Intersection over Union (IoU) of two bounding boxes.
-    Boxes are expected in [x1, y1, x2, y2] format.
-    """
-    x1_i = max(box1[0], box2[0])
-    y1_i = max(box1[1], box2[1])
-    x2_i = min(box1[2], box2[2])
-    y2_i = min(box1[3], box2[3])
+    if union_area <= 0:
+        return 0.0
 
-    inter_width = max(0, x2_i - x1_i)
-    inter_height = max(0, y2_i - y1_i)
-    inter_area = inter_width * inter_height
+    return intersection_area / union_area
 
-    box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
-    box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
 
-    union_area = box1_area + box2_area - inter_area
-
-    # Avoid division by zero
-    if union_area == 0:
-        return 0
-
-    return inter_area / union_area
-
-def apply_nms(predictions: List[Dict[str, Any]], iou_threshold: float) -> List[Dict[str, Any]]:
-    """
-    Applies Non-Maximum Suppression to a list of predictions.
-    Predictions are expected to have 'x', 'y', 'width', 'height', 'confidence', 'class'.
-    """
+def apply_nms(predictions: list[dict[str, Any]], iou_threshold: float) -> list[dict[str, Any]]:
     if not predictions:
         return []
 
-    # Convert bounding boxes from center format to [x1, y1, x2, y2]
-    boxes = np.array([[
-        p["x"] - p["width"] / 2,
-        p["y"] - p["height"] / 2,
-        p["x"] + p["width"] / 2,
-        p["y"] + p["height"] / 2
-    ] for p in predictions])
+    boxes = np.array(
+        [
+            [
+                prediction["x"] - prediction["width"] / 2,
+                prediction["y"] - prediction["height"] / 2,
+                prediction["x"] + prediction["width"] / 2,
+                prediction["y"] + prediction["height"] / 2,
+            ]
+            for prediction in predictions
+        ],
+        dtype=np.float32,
+    )
 
-    confidences = np.array([p["confidence"] for p in predictions])
-
-    # Sort by confidence
+    confidences = np.array([prediction["confidence"] for prediction in predictions], dtype=np.float32)
     sorted_indices = np.argsort(confidences)[::-1]
 
-    keep_indices = []
-    while len(sorted_indices) > 0:
-        # Pick the box with the highest confidence
-        current_index = sorted_indices[0]
+    keep_indices: list[int] = []
+    while sorted_indices.size > 0:
+        current_index = int(sorted_indices[0])
         keep_indices.append(current_index)
-
-        # Remove the current index from consideration
         sorted_indices = sorted_indices[1:]
 
-        if len(sorted_indices) == 0:
+        if sorted_indices.size == 0:
             break
 
-        # Compare current box with remaining boxes and remove those with high overlap
-        iou_scores = [compute_iou(boxes[current_index], boxes[i]) for i in sorted_indices]
-        overlap_indices = [sorted_indices[j] for j, iou in enumerate(iou_scores) if iou > iou_threshold]
+        remaining = [
+            idx
+            for idx in sorted_indices
+            if compute_iou(boxes[current_index], boxes[int(idx)]) <= iou_threshold
+        ]
+        sorted_indices = np.array(remaining, dtype=np.int64)
 
-        # Remove overlapping indices from consideration
-        sorted_indices = np.array([i for i in sorted_indices if i not in overlap_indices])
+    return [predictions[index] for index in keep_indices]
 
-    # Return the predictions that were kept
-    return [predictions[i] for i in keep_indices]
 
-async def get_predictions(image_path: str):
-    """
-    Sends image file to Roboflow as multipart upload for inference.
-    Applies Non-Maximum Suppression (NMS) to filter overlapping boxes.
-    """
+def _normalize_prediction(prediction: dict[str, Any]) -> dict[str, Any] | None:
+    required_keys = {"x", "y", "width", "height", "confidence", "class"}
+    if not required_keys.issubset(prediction):
+        return None
+
     try:
-        with open(image_path, "rb") as image_file:
-            response = requests.post(
-                url=f"https://detect.roboflow.com/{ROBOFLOW_MODEL_ID}",
+        return {
+            "x": float(prediction["x"]),
+            "y": float(prediction["y"]),
+            "width": float(prediction["width"]),
+            "height": float(prediction["height"]),
+            "confidence": float(prediction["confidence"]),
+            "class": str(prediction["class"]),
+        }
+    except (TypeError, ValueError):
+        return None
+
+
+async def get_predictions(image_path: Path, settings: Settings) -> list[dict[str, Any]]:
+    if not settings.roboflow_api_key:
+        raise ServiceConfigurationError("ROBOFLOW_API_KEY is not configured on the server.")
+
+    try:
+        image_bytes = image_path.read_bytes()
+    except OSError as exc:
+        raise ExternalServiceError(f"Could not read prepared image for inference: {exc}") from exc
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.roboflow_request_timeout_seconds) as client:
+            response = await client.post(
+                f"{settings.roboflow_base_url.rstrip('/')}/{settings.roboflow_model_id}",
                 params={
-                    "api_key": ROBOFLOW_API_KEY,
-                    "confidence": int(ROBOFLOW_CONFIDENCE_THRESHOLD * 100),
-                    "overlap": int(ROBOFLOW_OVERLAP_THRESHOLD * 100)
+                    "api_key": settings.roboflow_api_key,
+                    "confidence": int(settings.roboflow_confidence_threshold * 100),
+                    "overlap": int(settings.roboflow_overlap_threshold * 100),
                 },
-                files={"file": ("image.png", image_file, "image/png")}
+                files={"file": (image_path.name, image_bytes, "image/png")},
             )
             response.raise_for_status()
-            result = response.json()
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text.strip()[:500] or "No error body returned by Roboflow."
+        raise ExternalServiceError(
+            f"Roboflow inference failed with status {exc.response.status_code}: {detail}"
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise ExternalServiceError(f"Could not reach Roboflow: {exc}") from exc
 
-        raw_predictions = result.get("predictions", [])
-        # Apply NMS with configured overlap threshold
-        filtered_predictions = apply_nms(raw_predictions, ROBOFLOW_OVERLAP_THRESHOLD)
-        return filtered_predictions
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise ExternalServiceError("Roboflow returned a non-JSON response.") from exc
 
-    except Exception as e:
-        raise Exception(f"Error sending image to Roboflow: {str(e)}")
+    normalized_predictions = [
+        normalized
+        for normalized in (_normalize_prediction(item) for item in result.get("predictions", []))
+        if normalized and normalized["confidence"] >= settings.roboflow_confidence_threshold
+    ]
+
+    return apply_nms(normalized_predictions, settings.roboflow_overlap_threshold)

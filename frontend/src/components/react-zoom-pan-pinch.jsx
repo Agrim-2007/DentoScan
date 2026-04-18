@@ -13,18 +13,12 @@ const ZoomPanWrapper = ({ children }) => {
       minScale={0.5}
       maxScale={4}
       centerOnInit={true}
-      onZoomStop={(ref) => {
-        // You can add any callback here if needed
-      }}
-      onPanningStop={(ref) => {
-        // You can add any callback here if needed
-      }}
       options={{
         limitToBounds: true,
         transformEnabled: true,
       }}
     >
-      {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
+      {({ zoomIn, zoomOut, resetTransform }) => (
         <>
           <div style={{ marginBottom: '10px' }}>
             <button onClick={zoomIn}>Zoom In</button>

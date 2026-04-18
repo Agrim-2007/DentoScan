@@ -11,7 +11,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -26,13 +26,19 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/uploads:/app/uploads
-      - ./backend/converted:/app/converted
+      - ./backend/static:/app/static
+      - ./backend/temp:/app/temp
     environment:
       - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ROBOFLOW_MODEL_ID=${ROBOFLOW_MODEL_ID:-adr/6}
+      - ROBOFLOW_CONFIDENCE_THRESHOLD=${ROBOFLOW_CONFIDENCE_THRESHOLD:-0.3}
+      - ROBOFLOW_OVERLAP_THRESHOLD=${ROBOFLOW_OVERLAP_THRESHOLD:-0.5}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+      - GROQ_FALLBACK_MODELS=${GROQ_FALLBACK_MODELS:-llama-3.3-70b-versatile,openai/gpt-oss-20b}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,14 +1,15 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-python-multipart==0.0.6
-pydicom==2.4.3
-Pillow==10.1.0
-numpy==1.26.2
-requests==2.31.0
-openai==1.3.5
-python-dotenv==1.0.0
-inference_sdk[torch,cpu]  # Changed this line
-opencv-python-headless    # Add this line explicitly
-google-generativeai
-python-gdcm
-pylibjpeg
+fastapi==0.136.0
+uvicorn[standard]==0.44.0
+python-multipart==0.0.26
+pydantic-settings==2.13.1
+httpx==0.28.1
+pydicom==3.0.2
+Pillow==12.2.0
+numpy==2.4.4
+python-dotenv==1.2.2
+groq==1.2.0
+pylibjpeg==2.1.0
+pylibjpeg-libjpeg==2.4.0
+pylibjpeg-openjpeg==2.5.0
+pyjpegls==1.5.1
+pytest==9.0.3

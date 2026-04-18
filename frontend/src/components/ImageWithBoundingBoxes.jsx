@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
@@ -7,8 +7,7 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [zoomEnabled, setZoomEnabled] = useState(false);
 
-  const handleImageLoad = (event) => {
-    const { naturalWidth, naturalHeight } = event.target;
+  const updateImageSize = (naturalWidth, naturalHeight) => {
     const containerWidth = containerRef.current ? containerRef.current.clientWidth : naturalWidth;
     const scaleFactor = containerWidth / naturalWidth;
     const scaledHeight = naturalHeight * scaleFactor;
@@ -16,10 +15,19 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
   };
 
   useEffect(() => {
-    console.log('Image Size:', imageSize);
-    console.log('Image Dimensions from backend:', imageDimensions);
-    console.log('Predictions:', predictions);
-  }, [imageSize, imageDimensions, predictions]);
+    const handleResize = () => {
+      if (!imageRef.current) return;
+      updateImageSize(imageRef.current.naturalWidth, imageRef.current.naturalHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleImageLoad = (event) => {
+    const { naturalWidth, naturalHeight } = event.target;
+    updateImageSize(naturalWidth, naturalHeight);
+  };
 
   if (!imageUrl || !imageDimensions?.width || !imageDimensions?.height) return null;
 
@@ -39,7 +47,7 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
-        maxWidth: '400px', // Smaller max width for the image
+        maxWidth: '400px',
         height: 'auto',
         border: '1px solid #ccc',
         boxSizing: 'border-box',
@@ -95,21 +103,21 @@ const ImageWithBoundingBoxes = ({ imageUrl, predictions, imageDimensions }) => {
                     backgroundColor: 'transparent',
                   }}
                 >
-                  <div
-                    className="bounding-box-label"
-                    style={{
-                      backgroundColor: 'transparent', // unchanged
-                      color: 'black', // unchanged
-                      fontWeight: 'normal',
-                      fontSize: '12px',
-                      padding: '2px 4px',
-                      position: 'absolute',
-                      top: '110%',
-                      left: -10,
-                      whiteSpace: 'nowrap',
-                      pointerEvents: 'auto',
-                    }}
-                  >
+                    <div
+                      className="bounding-box-label"
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: 'black',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        padding: '2px 4px',
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                      }}
+                    >
                     {className} - {Math.round(confidence * 100)}%
                   </div>
                 </div>

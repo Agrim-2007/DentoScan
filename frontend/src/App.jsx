@@ -1,30 +1,23 @@
-import { useState, useRef, useEffect } from 'react'
-import { CircularProgress, Typography, Alert, Snackbar, List, ListItem, ListItemText, Paper } from '@mui/material'
+import { useEffect, useRef, useState } from 'react'
+import { CircularProgress, Typography, Alert, Snackbar, Paper } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import { styled } from '@mui/material/styles'
-import Button from '@mui/material/Button'
 import CloseIcon from '@mui/icons-material/Close'
 import { v4 as uuidv4 } from 'uuid'
 
-import DicomViewer from './components/DicomViewer'
 import ImageWithBoundingBoxes from './components/ImageWithBoundingBoxes'
 
 import './App.css'
 
-const VisuallyHiddenInput = styled('input')({
-  clip: 'rect(0 0 0 0)',
-  clipPath: 'inset(50%)',
-  height: 1,
-  overflow: 'hidden',
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  whiteSpace: 'nowrap',
-  width: 1,
-})
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const SUPPORTED_FORMATS = ['.dcm', '.rvg', '.png', '.jpg', '.jpeg']
+const MAX_FILE_SIZE = 50 * 1024 * 1024
 
-const API_BASE_URL = 'https://dentoscan.onrender.com'; 
-
+const buildApiUrl = (path) => `${API_BASE_URL}${path}`
+const buildAssetUrl = (path) => {
+  if (!path) return null
+  if (/^https?:\/\//i.test(path)) return path
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path
+}
 
 function App() {
   const [selectedFiles, setSelectedFiles] = useState([])
@@ -34,75 +27,113 @@ function App() {
   const [errorTimeout, setErrorTimeout] = useState(null)
   const [filePreviews, setFilePreviews] = useState([])
   const [selectedResult, setSelectedResult] = useState(null)
+  const fileInputRef = useRef(null)
 
-  const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
-  const SUPPORTED_FORMATS = ['.dcm', '.rvg']
+  useEffect(() => {
+    return () => {
+      if (errorTimeout) {
+        clearTimeout(errorTimeout)
+      }
+    }
+  }, [errorTimeout])
+
+  useEffect(() => {
+    if (!selectedResult) return
+    const updatedResult = processingResults.find((result) => result.id === selectedResult.id)
+    if (updatedResult && updatedResult !== selectedResult) {
+      setSelectedResult(updatedResult)
+    }
+  }, [processingResults, selectedResult])
+
+  const clearAllState = () => {
+    setSelectedFiles([])
+    setProcessingResults([])
+    setError(null)
+    setFilePreviews([])
+    setSelectedResult(null)
+    if (errorTimeout) {
+      clearTimeout(errorTimeout)
+      setErrorTimeout(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleFileSelect = async (event) => {
-    const files = Array.from(event.target.files || []);
-    const filesToAdd = [];
-    const errors = [];
-    const previewPromises = [];
+    const files = Array.from(event.target.files || [])
+    const filesToAdd = []
+    const errors = []
+    const previewPromises = []
 
     for (const file of files) {
-      // Check if file is already uploaded
       const isDuplicate = selectedFiles.some(existingFile => 
         existingFile.file.name === file.name && 
         existingFile.file.size === file.size
-      );
+      )
 
       if (isDuplicate) {
-        // Clear any existing timeout
         if (errorTimeout) {
-          clearTimeout(errorTimeout);
+          clearTimeout(errorTimeout)
         }
-        // Set the error message
-        setError(`${file.name} is already uploaded`);
-        // Set a new timeout to clear the error
-        const timeout = setTimeout(() => setError(null), 1000);
-        setErrorTimeout(timeout);
-        continue;
+        setError(`${file.name} is already uploaded`)
+        const timeout = setTimeout(() => setError(null), 1000)
+        setErrorTimeout(timeout)
+        continue
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`${file.name}: File size exceeds 50MB limit.`);
-        continue;
+        errors.push(`${file.name}: File size exceeds 50MB limit.`)
+        continue
       }
 
-      const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
       if (!SUPPORTED_FORMATS.includes(fileExtension)) {
-        errors.push(`${file.name}: Unsupported file format. Please upload ${SUPPORTED_FORMATS.join(', ')}`);
-        continue;
+        errors.push(`${file.name}: Unsupported file format. Please upload ${SUPPORTED_FORMATS.join(', ')}`)
+        continue
       }
 
-      // Add file with new ID
-      const id = uuidv4();
-      filesToAdd.push({ file, id });
+      const id = uuidv4()
+      filesToAdd.push({ file, id })
 
-      // Generate preview
       if (['.png', '.jpg', '.jpeg'].includes(fileExtension)) {
         const preview = await new Promise((resolve) => {
-          const reader = new FileReader();
+          const reader = new FileReader()
           reader.onload = (e) => {
-            resolve({ id, fileName: file.name, url: e.target.result });
-          };
-          reader.readAsDataURL(file);
-        });
-        previewPromises.push(Promise.resolve(preview));
+            resolve({ id, fileName: file.name, url: e.target.result })
+          }
+          reader.readAsDataURL(file)
+        })
+        previewPromises.push(Promise.resolve(preview))
       } else {
-        previewPromises.push(Promise.resolve({ id, fileName: file.name, url: null }));
+        previewPromises.push(Promise.resolve({ id, fileName: file.name, url: null }))
       }
     }
 
-    const newPreviews = await Promise.all(previewPromises);
+    const newPreviews = await Promise.all(previewPromises)
 
     if (errors.length > 0) {
-      setError(errors.join(' '));
+      setError(errors.join(' '))
     }
 
-    setSelectedFiles(prevFiles => [...prevFiles, ...filesToAdd]);
-    setFilePreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
-  };
+    setSelectedFiles(prevFiles => [...prevFiles, ...filesToAdd])
+    setFilePreviews(prevPreviews => [...prevPreviews, ...newPreviews])
+
+    if (!selectedResult && filesToAdd.length > 0) {
+      setSelectedResult({
+        fileName: filesToAdd[0].file.name,
+        id: filesToAdd[0].id,
+        imageUrl: null,
+        predictions: null,
+        imageDimensions: null,
+        report: null,
+        error: null,
+        isLoading: false,
+      })
+    }
+
+    event.target.value = ''
+  }
 
   const handlePredict = async () => {
     if (selectedFiles.length === 0) {
@@ -133,8 +164,7 @@ function App() {
       let result = initialResults.find(r => r.id === fileItem.id) || { id: fileItem.id, fileName: fileItem.file.name, isLoading: true }; 
 
       try {
-
-        const response = await fetch(`${API_BASE_URL}/api/predict`, {
+        const response = await fetch(buildApiUrl('/api/predict'), {
           method: 'POST',
           body: formData
         })
@@ -147,7 +177,7 @@ function App() {
         const data = await response.json()
         result = { 
           ...result, 
-          imageUrl: `${API_BASE_URL}${data.png_url}`, 
+          imageUrl: buildAssetUrl(data.png_url), 
           predictions: data.predictions, 
           imageDimensions: data.image_dimensions, 
           report: data.report, 
@@ -157,22 +187,26 @@ function App() {
         console.error(`Error processing ${fileItem.file.name}:`, error)
         result = { ...result, error: error.message || 'Error processing file.', isLoading: false }
       } finally {
-
         setProcessingResults(currentResults =>
           currentResults.map(item => (item.id === fileItem.id ? result : item))
         )
+        setSelectedResult(currentSelected => {
+          if (!currentSelected) return result
+          if (currentSelected.id === fileItem.id) return result
+          return currentSelected
+        })
       }
       return result; 
     })
 
-
     const results = await Promise.all(processingPromises)
 
-    if (results.length > 0) {
-      setSelectedResult(results[0])
+    if (results.length > 0 && !selectedResult) {
+      const firstCompleted = results.find(result => !result.error) || results[0]
+      setSelectedResult(firstCompleted)
     }
 
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   const handleCloseError = () => {
@@ -181,50 +215,28 @@ function App() {
       clearTimeout(errorTimeout);
       setErrorTimeout(null);
     }
-  };
+  }
 
   const handleRemoveFile = (idToRemove) => {
-    setSelectedFiles(prevFiles => prevFiles.filter(fileItem => fileItem.id !== idToRemove));
-    setFilePreviews(prevPreviews => prevPreviews.filter(previewItem => previewItem.id !== idToRemove));
-    setProcessingResults(prevResults => prevResults.filter(resultItem => resultItem.id !== idToRemove));
-    setSelectedResult(null);
-  };
-
-  const renderBoundingBoxes = (predictions, imageElement, imageDimensions) => {
-    if (!predictions || !imageElement || !imageDimensions || !imageDimensions.width || !imageDimensions.height) return null
-
-    const imageSize = { width: imageElement.offsetWidth, height: imageElement.offsetHeight }
-    // Calculate scale based on rendered image size and original image dimensions
-    const scaleX = imageSize.width / imageDimensions.width;
-    const scaleY = imageSize.height / imageDimensions.height;
-
-    return predictions.map((prediction, index) => {
-      const { x, y, width, height, class: className, confidence } = prediction
-      // Calculate top-left coordinates from center coordinates
-      const boxLeft = (x - width / 2) * scaleX;
-      const boxTop = (y - height / 2) * scaleY;
-      const boxWidth = width * scaleX;
-      const boxHeight = height * scaleY;
-
-      return (
-        <div
-          key={index}
-          className="bounding-box"
-          style={{ left: `${boxLeft}px`, top: `${boxTop}px`, width: `${boxWidth}px`, height: `${boxHeight}px` }}
-        >
-          <div className="bounding-box-label">
-            {className} - {Math.round(confidence * 100)}%
-          </div>
-        </div>
-      )
+    const remainingResults = processingResults.filter(resultItem => resultItem.id !== idToRemove)
+    setSelectedFiles(prevFiles => prevFiles.filter(fileItem => fileItem.id !== idToRemove))
+    setFilePreviews(prevPreviews => prevPreviews.filter(previewItem => previewItem.id !== idToRemove))
+    setProcessingResults(remainingResults)
+    setSelectedResult(currentSelected => {
+      if (!currentSelected || currentSelected.id !== idToRemove) return currentSelected
+      return remainingResults[0] || null
     })
+  }
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click()
   }
 
   return (
     <div className="outside-container" style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
       <header style={{padding: '1rem', textAlign: 'center', fontWeight: 'bold', fontSize: '2rem'}}>
         DentoScan
-        <p style={{margin: 0, fontSize: '1rem', fontWeight: 'normal', color: '#6200ea'}}>Powered by ROBOFLOW and GEMINI</p>
+        <p style={{margin: 0, fontSize: '1rem', fontWeight: 'normal', color: '#6200ea'}}>Powered by ROBOFLOW and GROQ</p>
       </header>
       <div className="app-container" style={{flex: 1, display: 'flex', overflow: 'hidden'}}>
         <Snackbar 
@@ -243,9 +255,10 @@ function App() {
             Dental X-ray Viewer
           </Typography>
           
-          <div className="upload-area" onClick={() => document.getElementById('fileInput')?.click()} style={{ flexShrink: 1 }}>
+          <div className="upload-area" onClick={openFilePicker} style={{ flexShrink: 1 }}>
             <input
               id="fileInput"
+              ref={fileInputRef}
               type="file"
               multiple
               accept={SUPPORTED_FORMATS.join(',')}
@@ -271,7 +284,23 @@ function App() {
                     className={`file-preview-item ${selectedResult?.id === preview.id ? 'selected' : ''}`}
                     onClick={() => {
                       const result = processingResults.find(r => r.id === preview.id);
-                      if (result) setSelectedResult(result);
+                      if (result) {
+                        setSelectedResult(result)
+                        return
+                      }
+                      const pendingFile = selectedFiles.find(fileItem => fileItem.id === preview.id)
+                      if (pendingFile) {
+                        setSelectedResult({
+                          fileName: pendingFile.file.name,
+                          id: pendingFile.id,
+                          imageUrl: null,
+                          predictions: null,
+                          imageDimensions: null,
+                          report: null,
+                          error: null,
+                          isLoading: false,
+                        })
+                      }
                     }}
                   >
                     <div className="preview-content-container">
@@ -352,13 +381,7 @@ function App() {
           {(processingResults.length > 0 || selectedFiles.length > 0) && (
             <div style={{ paddingTop: '20px', textAlign: 'center' }}>
               <button
-                onClick={() => {
-                  setSelectedFiles([]);
-                  setFilePreviews([]);
-                  setProcessingResults([]);
-                  setSelectedResult(null);
-                  window.location.reload();
-                }}
+                onClick={clearAllState}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#6200ea',
